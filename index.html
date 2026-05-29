@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>trouver l'amour</title>
+<div id="feedback"></div>
+<div id="bg-blur"></div>
+<div id="feedback"></div>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#ffffff;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    overflow:hidden;
+    font-family:Arial, sans-serif;
+}
+
+#app{
+    position:relative;
+    width:350px;
+    height:600px;
+    isolation:isolate;
+}
+
+
+
+.card{
+    position:absolute;
+    width:100%;
+    height:100%;
+    border-radius:20px;
+    overflow:hidden;
+    background:#222;
+    box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    user-select:none;
+    touch-action:none;
+
+    z-index:2;
+}
+
+
+.card img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    pointer-events:none;
+}
+
+
+.label{
+    position:absolute;
+    top:40px;
+    padding:10px 20px;
+    border:4px solid;
+    font-size:2rem;
+    font-weight:bold;
+    opacity:0;
+    transform:rotate(-15deg);
+}
+
+.like{
+    left:20px;
+    color:#00ff88;
+    border-color:#00ff88;
+}
+
+.nope{
+    right:20px;
+    color:#ff3355;
+    border-color:#ff3355;
+    transform:rotate(15deg);
+}
+
+
+
+#controls{
+    position:absolute;
+    bottom:40px;
+    width:100%;
+    display:flex;
+    justify-content:space-evenly;
+    z-index:5;
+}
+
+#controls button{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    border:none;
+    font-size:28px;
+    cursor:pointer;
+    background:#222;
+    color:white;
+    box-shadow:0 5px 15px rgba(0,0,0,0.5);
+}
+
+#likeBtn{ color:#00ff88; }
+#nopeBtn{ color:#ff3355; }
+
+
+
+#bg-blur{
+    position:absolute;
+    inset:0;
+    z-index:10;
+
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    background:rgba(0,0,0,0);
+
+    pointer-events:none;
+
+    transition: backdrop-filter 0.4s ease, background 0.4s ease;
+}
+
+
+#feedback{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    font-size:120px;
+    font-weight:bold;
+    pointer-events:none;
+
+    z-index:9999; 
+
+    opacity:0;
+    transition:opacity 0.15s ease, transform 0.3s ease;
+}
+
+#feedback.show{
+    opacity:1;
+    transform:translate(-50%, -50%) scale(1.2);
+}
+
+#feedback.like{
+    color:#00ff88;
+}
+
+#feedback.nope{
+    color:#ff3355;
+}
+</style>
+
+</head>
+
+<body>
+
+<div id="app"></div>
+<div id="controls">
+    <button id="nopeBtn">✕</button>
+    <button id="likeBtn">♥</button>
+</div>
+
+<script>
+
+
+
+let originalImages = [
+  "images/3CC946CE-52EE-4496-B662-D03C0603550F.JPG",
+  "images/3D1781EF-8A63-4B0E-A468-6ECFBE05A919.JPG",
+  "images/4794A01A-1468-45FD-8DB5-3AADC58244AF.JPG",
+  "images/5280DABA-B71D-45EF-B1D5-7617C630BF01.JPG",
+  "images/55AD9792-31EF-4886-AD7A-14C16E3C57DC.JPG",
+  "images/67FE0A59-140A-48D7-8794-54EF7B6A44D2.jpg",
+  "images/6DBCB5AA-1758-4D1E-89F5-F72D59F5ECF6.JPG",
+  "images/77323607896__813BC37D-0A75-46A9-B158-3447E8CF9982.JPG",
+  "images/77869511578__D04B29B8-923E-4C59-92CB-A42F9F010CCB.JPG",
+  "images/78004062453__D5660687-DF40-4F45-8FFE-5258C4FD25E3.JPG",
+  "images/78079257300__638948B8-A174-4FEC-A6AE-88653E96A13E.JPG",
+  "images/78291050549__F7AB5240-2635-4C48-8C4A-8E9054BB3C65.JPG",
+  "images/78326590255__BE6F6F31-03F8-41FE-9598-530E02F7A26C.JPG",
+  "images/78417357443__40AEE661-EF69-4901-98C7-E993BB06D292.JPG",
+  "images/78432849348__F018BEBC-9E4B-4383-98A2-A6ED56773155.JPG",
+  "images/78497514227__B814DE31-50BD-4C2E-A232-BC321F9F90CB.JPG",
+  "images/78718250655__CF47E794-FED4-47BD-8428-81240E735F06.JPG",
+  "images/78828843889__92C395CF-52AA-4F4D-B15F-AE488118018F.JPG",
+  "images/78943244621__CC28002D-A944-4108-A020-F8FD732B309E.JPG",
+  "images/7AA2A1BB-2D05-48BD-89A1-FE34C2B4A6CF.JPG",
+  "images/D56E9C8D-31D1-4D46-9FE6-85E0D38B55A0.JPG",
+  "images/E38F2BB7-F1AC-4A2B-B970-7F7F59B2EC45.JPG",
+  "images/EF124378-F21B-4D2C-A8D9-A304386F939C.JPG",
+  "images/FA87EAA2-27B7-4EB5-A7D5-D21CBA1A43CD.JPG",
+  "images/IMG_0547.JPG",
+  "images/IMG_0627.JPG",
+  "images/IMG_0743.JPG",
+  "images/IMG_0997.JPG",
+  "images/IMG_1106.JPG",
+  "images/IMG_1316.JPG",
+  "images/IMG_1333.JPG"
+];
+
+/* -----------------------------
+   2. PRELOAD (évite les lag)
+------------------------------*/
+
+function preload(list){
+    list.forEach(src => {
+        const img = new Image();
+        img.src = src;
+    });
+}
+preload(originalImages);
+
+/* -----------------------------
+   3. SHUFFLE
+------------------------------*/
+
+function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+/* -----------------------------
+   4. DECK INFINI
+------------------------------*/
+
+let deck = shuffle([...originalImages]);
+
+function refillDeck(){
+    deck = shuffle([...originalImages]);
+}
+
+function getNextImage(){
+    if(deck.length === 0){
+        refillDeck();
+    }
+    return deck.pop();
+}
+
+/* -----------------------------
+   5. APP
+------------------------------*/
+
+const app = document.getElementById("app");
+
+/* -----------------------------
+   6. SWIPE CENTRALISÉ
+------------------------------*/
+
+function swipeCard(card, direction){
+
+    showFeedback(direction === "right" ? "like" : "nope");
+    const isLike = direction === "right";
+
+    card.style.transition = "transform 0.4s ease, opacity 0.4s ease";
+
+    card.style.transform = `
+        translateX(${isLike ? window.innerWidth : -window.innerWidth}px)
+        rotate(${isLike ? 30 : -30}deg)
+    `;
+
+    card.style.opacity = 0;
+
+    setTimeout(() => {
+        card.remove();
+        addCard();
+    }, 250);
+}
+
+
+
+
+
+function getTopCard(){
+    return document.querySelector(".card:last-child");
+}
+
+/* -----------------------------
+   7. CREATE CARD
+------------------------------*/
+
+function createCard(src){
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+        <img src="${src}">
+        <div class="label like">LIKE</div>
+        <div class="label nope">NOPE</div>
+    `;
+
+    let startX = 0;
+    let currentX = 0;
+    let velocity = 0;
+    let lastX = 0;
+    let lastTime = 0;
+    let dragging = false;
+
+    const threshold = 120;
+
+    card.addEventListener("pointerdown", (e) => {
+
+        dragging = true;
+        startX = e.clientX;
+
+        lastX = startX;
+        lastTime = Date.now();
+
+        card.style.transition = "none";
+
+        document.addEventListener("pointermove", onMove);
+        document.addEventListener("pointerup", onEnd);
+    });
+
+    function onMove(e){
+
+        if(!dragging) return;
+
+        currentX = e.clientX - startX;
+
+        const now = Date.now();
+        const dt = now - lastTime;
+
+        velocity = (e.clientX - lastX) / (dt || 1);
+
+        lastX = e.clientX;
+        lastTime = now;
+
+        const rotate = currentX * 0.04;
+
+        card.style.transform = `
+            translateX(${currentX}px)
+            rotate(${rotate}deg)
+        `;
+
+        const like = card.querySelector(".like");
+        const nope = card.querySelector(".nope");
+
+        if(currentX > 0){
+            like.style.opacity = Math.min(currentX / 120, 1);
+            nope.style.opacity = 0;
+        } else {
+            nope.style.opacity = Math.min(Math.abs(currentX) / 120, 1);
+            like.style.opacity = 0;
+        }
+    }
+
+    function onEnd(){
+
+        dragging = false;
+
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onEnd);
+
+        const fastSwipe = Math.abs(velocity) > 0.6;
+        const shouldSwipe = Math.abs(currentX) > threshold || fastSwipe;
+
+        if(shouldSwipe){
+            swipeCard(card, currentX > 0 ? "right" : "left");
+        } else {
+            card.style.transition = "0.25s ease";
+            card.style.transform = "translateX(0px) rotate(0deg)";
+            card.querySelector(".like").style.opacity = 0;
+            card.querySelector(".nope").style.opacity = 0;
+        }
+    }
+
+    return card;
+}
+
+/* -----------------------------
+   8. ADD CARD
+------------------------------*/
+
+function addCard(){
+    const img = getNextImage();
+    const card = createCard(img);
+    app.prepend(card);
+}
+
+/* -----------------------------
+   9. CONTROLS (boutons)
+------------------------------*/
+
+document.getElementById("likeBtn").addEventListener("click", () => {
+    const card = getTopCard();
+    if(card){
+        showFeedback("like");
+        swipeCard(card, "right");
+    }
+});
+
+document.getElementById("nopeBtn").addEventListener("click", () => {
+    const card = getTopCard();
+    if(card){
+        showFeedback("nope");
+        swipeCard(card, "left");
+    }
+});
+
+/* -----------------------------
+   10. KEYBOARD
+------------------------------*/
+document.addEventListener("keydown", (e) => {
+
+    const card = getTopCard();
+    if(!card) return;
+
+    if(e.key === "ArrowRight"){
+        showFeedback("like");
+        swipeCard(card, "right");
+    }
+
+    if(e.key === "ArrowLeft"){
+        showFeedback("nope");
+        swipeCard(card, "left");
+    }
+});
+
+/* -----------------------------
+   11. INIT
+------------------------------*/
+
+addCard();
+addCard();
+addCard();
+
+function showFeedback(type){
+
+    const el = document.getElementById("feedback");
+
+    // ACTIVER BLUR
+    enableBlur();
+
+    if(type === "like"){
+        el.textContent = "♥";
+        el.className = "like show";
+    }
+
+    if(type === "nope"){
+        el.textContent = "✕";
+        el.className = "nope show";
+    }
+
+    clearTimeout(el._t);
+
+    el._t = setTimeout(() => {
+        el.className = "";
+        disableBlur(); // STOP BLUR après animation
+    }, 300);
+}
+
+function enableBlur(){
+    const bg = document.getElementById("bg-blur");
+    bg.style.backdropFilter = "blur(12px)";
+    bg.style.webkitBackdropFilter = "blur(12px)";
+    bg.style.background = "rgba(0,0,0,0.25)";
+}
+
+function disableBlur(){
+    const bg = document.getElementById("bg-blur");
+    bg.style.backdropFilter = "blur(0px)";
+    bg.style.webkitBackdropFilter = "blur(0px)";
+    bg.style.background = "rgba(0,0,0,0)";
+}
+
+</script>
+
+</body>
+</html>
